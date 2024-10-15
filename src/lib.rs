@@ -178,17 +178,17 @@ pub fn spawn_text(mut commands: Commands) {
         });
 }
 
-pub fn _fire_ray(
-    camera_query: Query<(&Camera, &GlobalTransform)>,
-    windows: Query<&Window>,
-) {
-    let (camera, camera_transform) = camera_query.single();
+// pub fn fire_ray(
+//     camera_query: Query<(&Camera, &GlobalTransform)>,
+//     windows: Query<&Window>,
+// ) {
+//     let (camera, camera_transform) = camera_query.single();
 
-    let Some(cursor_position) = windows.single().cursor_position() else {
-        return;
-    };
+//     let Some(cursor_position) = windows.single().cursor_position() else {
+//         return;
+//     };
     
-    let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-        return;
-    };
-}
+//     let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
+//         return;
+//     };
+// }
