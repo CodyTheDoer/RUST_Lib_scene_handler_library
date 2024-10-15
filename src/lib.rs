@@ -10,6 +10,32 @@ pub struct GlbComponent;
 pub struct Player;
 
 #[derive(Debug, Component)]
+pub struct Triangle{
+    point_a: Vec3,
+    point_b: Vec3,
+    point_c: Vec3,
+}
+
+impl Triangle {
+    pub fn as_tuple(&self) -> (Vec3, Vec3, Vec3) {
+        (self.point_a, self.point_b, self.point_c)
+    }
+    
+    // Getter methods for each field
+    pub fn a(&self) -> Vec3 {
+        self.point_a
+    }
+
+    pub fn b(&self) -> Vec3 {
+        self.point_b
+    }
+
+    pub fn c(&self) -> Vec3 {
+        self.point_c
+    }
+}
+
+#[derive(Debug, Component)]
 pub struct WorldModelCamera;
 
 pub fn setup_glb(
@@ -152,7 +178,9 @@ pub fn animate_light_direction(
     }
 }
 
-pub fn spawn_text(mut commands: Commands) {
+pub fn spawn_text(
+    mut commands: Commands,
+) {
     commands
         .spawn(NodeBundle {
             style: Style {
@@ -176,6 +204,13 @@ pub fn spawn_text(mut commands: Commands) {
                 },
             ));
         });
+}
+
+pub fn unpack_glb(
+    glb_components = With<GlbComponent>,
+    triangles: Res<Triangle>,
+) {
+
 }
 
 // pub fn fire_ray(

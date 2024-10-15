@@ -32,6 +32,7 @@ fn main() {
             spawn_lights,
             spawn_text,
             |commands: Commands, asset_server: Res<AssetServer>| setup_glb(commands, asset_server, "cube.glb#Scene0".to_string()),
+            |asset_server: Res<AssetServer>|unpack_glb(asset_server, "cube.glb#Scene0".to_string()),
         ),
     )
     .add_systems(
