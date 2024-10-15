@@ -9,7 +9,7 @@ pub struct GlbComponent;
 #[derive(Debug, Component)]
 pub struct Player;
 
-#[derive(Debug, Component)]
+#[derive(Debug, Resource)]
 pub struct Triangle{
     point_a: Vec3,
     point_b: Vec3,
@@ -32,6 +32,27 @@ impl Triangle {
 
     pub fn c(&self) -> Vec3 {
         self.point_c
+    }
+}
+
+#[derive(Debug, Resource)]
+pub struct Triangles{
+    pub triangles: Vec<Triangle>,
+}
+
+impl Triangles {    
+    pub fn new() -> Self {
+        Triangles {
+            triangles: Vec::new(),
+        }
+    }
+
+    pub fn add_triangle(&mut self, triangle: Triangle) {
+        self.triangles.push(triangle);
+    }
+
+    pub fn get_triangles(&self) -> &Vec<Triangle> {
+        &self.triangles
     }
 }
 
@@ -207,11 +228,20 @@ pub fn spawn_text(
 }
 
 pub fn unpack_glb(
-    glb_components = With<GlbComponent>,
-    triangles: Res<Triangle>,
+    asset_server: Res<AssetServer>, 
+    triangles: Res<Triangles>,
 ) {
-
+    println!("{:?}", asset_server);
+    println!("{:?}", triangles.get_triangles());
 }
+
+/*
+Results: 
+Res(AssetServer { info: AssetInfos { path_to_id: {cube.glb#Scene0: {TypeId(0x9836914029f44d2f40c171506adef220): Index { type_id: TypeId(0x9836914029f44d2f40c171506adef220), index: AssetIndex { generation: 0, index: 0 } }}}, infos: {Index { type_id: TypeId(0x9836914029f44d2f40c171506adef220), index: AssetIndex { generation: 0, index: 0 } }: AssetInfo { weak_handle: (Weak), path: Some(cube.glb#Scene0), load_state: Loading, dep_load_state: Loading, rec_dep_load_state: Loading, loading_dependencies: {}, failed_dependencies: {}, loading_rec_dependencies: {}, failed_rec_dependencies: {}, dependants_waiting_on_load: {}, dependants_waiting_on_recursive_dep_load: {}, loader_dependencies: {}, handle_drops_to_skip: 0 }} } })
+[]
+
+Looks like I need to figure out the asset server but big progress!
+*/
 
 // pub fn fire_ray(
 //     camera_query: Query<(&Camera, &GlobalTransform)>,
