@@ -177,3 +177,7 @@ pub fn spawn_text(mut commands: Commands) {
             ));
         });
 }
+
+pub fn fire_ray() {
+    
+}
