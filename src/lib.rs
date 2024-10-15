@@ -178,7 +178,7 @@ pub fn spawn_text(mut commands: Commands) {
         });
 }
 
-pub fn fire_ray(
+pub fn _fire_ray(
     camera_query: Query<(&Camera, &GlobalTransform)>,
     windows: Query<&Window>,
 ) {

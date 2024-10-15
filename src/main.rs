@@ -38,7 +38,7 @@ fn main() {
         Update, 
         (
             adjust_player_camera.run_if(input_pressed(MouseButton::Right)),
-            fire_ray.run_if(input_pressed(MouseButton::Left)),
+            // fire_ray.run_if(input_pressed(MouseButton::Left)),
             draw_cursor,
             change_fov,
             animate_light_direction,
