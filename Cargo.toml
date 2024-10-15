@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+wrti_library = { path = "../wrti_library" }
+glam = "0.29"
 bevy = "0.14.2"
