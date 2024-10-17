@@ -9,9 +9,10 @@ Figure out how to load multiple gbl files into the scene_library_handler
 
 use scene_handler_library::{
     setup_glb, spawn_view_model, spawn_lights, animate_light_direction,
-    draw_cursor, spawn_text, change_fov, adjust_player_camera, unpack_glb
+    draw_cursor, spawn_text, change_fov, adjust_player_camera, unpack_glb_data
 }; 
 
+use scene_handler_library::GlbComponents;
 use scene_handler_library::Triangles;
 
 use wrti_library::watertight_ray_triangle_intersection;
@@ -26,6 +27,7 @@ fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
     .insert_resource(DirectionalLightShadowMap { size: 4096 })
+    .insert_resource(GlbComponents::new())
     .insert_resource(Triangles::new())
     .add_systems(
         Startup,
@@ -34,8 +36,10 @@ fn main() {
             spawn_view_model,
             spawn_lights,
             spawn_text,
-            |commands: Commands, asset_server: Res<AssetServer>| setup_glb(commands, asset_server, "cube.glb#Scene0".to_string()),
-            |asset_server: Res<AssetServer>, triangles: Res<Triangles>|unpack_glb(asset_server, triangles),
+            |commands: Commands, glb_components: ResMut<GlbComponents>, asset_server: Res<AssetServer>|
+                setup_glb(commands, glb_components, asset_server, "cube.glb#Scene0".to_string()),
+            |glb_components: Res<GlbComponents>, triangles: Res<Triangles>|
+                unpack_glb_data(glb_components, triangles),
         ),
     )
     .add_systems(

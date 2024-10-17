@@ -3,8 +3,29 @@ use bevy::pbr::{CascadeShadowConfigBuilder};
 use bevy::prelude::*;
 use std::f32::consts::*;
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Resource)]
 pub struct GlbComponent;
+
+#[derive(Debug, Resource)]
+pub struct GlbComponents{
+    pub glb_components: Vec<GlbComponent>,
+}
+
+impl GlbComponents {
+    pub fn new() -> Self {
+        GlbComponents {
+            glb_components: Vec::new(),
+        }
+    }
+
+    pub fn add_glb_component(&mut self, glb_component: GlbComponent) {
+        self.glb_components.push(glb_component);
+    }
+
+    pub fn get_glb_components(&self) -> &Vec<GlbComponent> {
+        &self.glb_components
+    }
+}
 
 #[derive(Debug, Component)]
 pub struct Player;
@@ -61,6 +82,7 @@ pub struct WorldModelCamera;
 
 pub fn setup_glb(
     mut commands: Commands, 
+    mut glb_components: ResMut<GlbComponents>, 
     asset_server: Res<AssetServer>, 
     glb_path: String,
 ) {
@@ -71,7 +93,16 @@ pub fn setup_glb(
             ..default()
         },
         GlbComponent,  // Tag it for raycasting detection
+        glb_components.add_glb_component(GlbComponent), // Tag it for raycasting detection
     ));
+}
+
+pub fn unpack_glb_data(
+    glb_components: Res<GlbComponents>, 
+    triangles: Res<Triangles>,
+) {
+    println!("{:?}", glb_components.get_glb_components());
+    println!("{:?}", triangles.get_triangles());
 }
 
 pub fn spawn_view_model(
@@ -227,13 +258,6 @@ pub fn spawn_text(
         });
 }
 
-pub fn unpack_glb(
-    asset_server: Res<AssetServer>, 
-    triangles: Res<Triangles>,
-) {
-    println!("{:?}", asset_server);
-    println!("{:?}", triangles.get_triangles());
-}
 
 /*
 Results: 
