@@ -9,9 +9,10 @@ Figure out how to load multiple gbl files into the scene_library_handler
 
 use scene_handler_library::{
     setup_glb, spawn_view_model, spawn_lights, animate_light_direction,
-    draw_cursor, spawn_text, change_fov, adjust_player_camera, unpack_glb_data
+    draw_cursor, spawn_text, change_fov, adjust_player_camera, fire_ray
 }; 
 
+use scene_handler_library::DataState;
 use scene_handler_library::GlbComponents;
 use scene_handler_library::Triangles;
 
@@ -27,6 +28,7 @@ fn main() {
     App::new()
     .add_plugins(DefaultPlugins)
     .insert_resource(DirectionalLightShadowMap { size: 4096 })
+    .insert_resource(DataState::new())
     .insert_resource(GlbComponents::new())
     .insert_resource(Triangles::new())
     .add_systems(
@@ -36,17 +38,17 @@ fn main() {
             spawn_view_model,
             spawn_lights,
             spawn_text,
-            |commands: Commands, glb_components: ResMut<GlbComponents>, asset_server: Res<AssetServer>|
-                setup_glb(commands, glb_components, asset_server, "cube.glb#Scene0".to_string()),
-            |glb_components: Res<GlbComponents>, triangles: Res<Triangles>|
-                unpack_glb_data(glb_components, triangles),
+            |commands: Commands, data_state: ResMut<DataState>, glb_components: ResMut<GlbComponents>, asset_server: Res<AssetServer>|
+                setup_glb(commands, data_state, glb_components, asset_server, "cube.glb#Scene0".to_string()),
         ),
     )
     .add_systems(
         Update, 
         (
-            adjust_player_camera.run_if(input_pressed(MouseButton::Right)),
-            // fire_ray.run_if(input_pressed(MouseButton::Left)),
+            adjust_player_camera
+                .run_if(input_pressed(MouseButton::Right)),
+            fire_ray
+                .run_if(input_pressed(MouseButton::Left)),
             draw_cursor,
             change_fov,
             animate_light_direction,

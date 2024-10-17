@@ -1,29 +1,67 @@
 use bevy::input::mouse::MouseMotion;
 use bevy::pbr::{CascadeShadowConfigBuilder};
 use bevy::prelude::*;
+use bevy::render::mesh::Mesh;
+
 use std::f32::consts::*;
 
 #[derive(Debug, Component, Resource)]
 pub struct GlbComponent;
 
 #[derive(Debug, Resource)]
+pub struct DataState{
+    pub data_loaded: bool,
+    pub data_parsed: bool,
+}
+
+impl DataState {
+    pub fn new() -> Self {
+        DataState {
+            data_loaded: false,
+            data_parsed: false,
+        }
+    }
+    
+    pub fn set_loaded_true(&mut self) {
+        self.data_loaded = true;
+    }
+    
+    pub fn set_parsed_true(&mut self) {
+        self.data_parsed = true;
+    }
+
+    pub fn set_false(&mut self) {
+        self.data_loaded = false;
+        self.data_parsed = false;
+    }
+
+    pub fn loaded(&self) -> bool {
+        self.data_loaded
+    }
+
+    pub fn parsed(&self) -> bool {
+        self.data_parsed
+    }
+}
+
+#[derive(Debug, Resource)]
 pub struct GlbComponents{
-    pub glb_components: Vec<GlbComponent>,
+    pub glb_entities: Vec<Entity>,
 }
 
 impl GlbComponents {
     pub fn new() -> Self {
         GlbComponents {
-            glb_components: Vec::new(),
+            glb_entities: Vec::new(),
         }
     }
 
-    pub fn add_glb_component(&mut self, glb_component: GlbComponent) {
-        self.glb_components.push(glb_component);
+    pub fn add_entity(&mut self, entity: Entity) {
+        self.glb_entities.push(entity);
     }
 
-    pub fn get_glb_components(&self) -> &Vec<GlbComponent> {
-        &self.glb_components
+    pub fn get_entities(&self) -> &Vec<Entity> {
+        &self.glb_entities
     }
 }
 
@@ -82,27 +120,70 @@ pub struct WorldModelCamera;
 
 pub fn setup_glb(
     mut commands: Commands, 
+    mut data_state: ResMut<DataState>, 
     mut glb_components: ResMut<GlbComponents>, 
     asset_server: Res<AssetServer>, 
     glb_path: String,
 ) {
-    commands.spawn((
+    let entity = commands.spawn((
         SceneBundle {
             // Load the scene from GLB file
             scene: asset_server.load(glb_path),
             ..default()
         },
         GlbComponent,  // Tag it for raycasting detection
-        glb_components.add_glb_component(GlbComponent), // Tag it for raycasting detection
-    ));
+    ))
+    .id();
+
+    glb_components.add_entity(entity); // Tag it for raycasting detection
+    data_state.set_loaded_true();
 }
 
 pub fn unpack_glb_data(
+    mut data_state: ResMut<DataState>,
     glb_components: Res<GlbComponents>, 
     triangles: Res<Triangles>,
+    meshes: Res<Assets<Mesh>>,
+    query: Query<(&Handle<Mesh>, Entity)>,
 ) {
-    println!("{:?}", glb_components.get_glb_components());
-    println!("{:?}", triangles.get_triangles());
+    println!("GlbComponents: {:?}", glb_components.get_entities());
+    println!("Triangles: {:?}", triangles.get_triangles());
+    for &entity in glb_components.get_entities() {
+        if let Ok((mesh_handle, entity)) = query.get(entity) {
+            if let Some(mesh) = meshes.get(mesh_handle) {
+                println!("Mesh data for entity {:?}:", entity);
+            } else {
+                println!("Mesh asset not found for entity {:?}", entity);
+            }
+        }
+    }
+    data_state.set_parsed_true();
+}
+
+pub fn fire_ray(
+    data_state: ResMut<DataState>,
+    glb_components: Res<GlbComponents>,
+    triangles: Res<Triangles>,
+    meshes: Res<Assets<Mesh>>,
+    query: Query<(&Handle<Mesh>, Entity)>,
+    camera_query: Query<(&Camera, &GlobalTransform)>,
+    windows: Query<&Window>,
+) {
+    if data_state.loaded() && !data_state.parsed() {
+        unpack_glb_data(data_state, glb_components, triangles, meshes, query);
+    }
+
+    let (camera, camera_transform) = camera_query.single();
+
+    let Some(cursor_position) = windows.single().cursor_position() else {
+        return;
+    };
+    
+    let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
+        return;
+    };
+
+    println!("Ray data: {:?}:", ray); //Ray data: Ray3d { origin: Vec3(0.15266868, 6.976395, 4.955549), direction: Dir3(Vec3(0.9497226, -0.14684285, -0.27652156)) }:
 }
 
 pub fn spawn_view_model(
@@ -257,27 +338,3 @@ pub fn spawn_text(
             ));
         });
 }
-
-
-/*
-Results: 
-Res(AssetServer { info: AssetInfos { path_to_id: {cube.glb#Scene0: {TypeId(0x9836914029f44d2f40c171506adef220): Index { type_id: TypeId(0x9836914029f44d2f40c171506adef220), index: AssetIndex { generation: 0, index: 0 } }}}, infos: {Index { type_id: TypeId(0x9836914029f44d2f40c171506adef220), index: AssetIndex { generation: 0, index: 0 } }: AssetInfo { weak_handle: (Weak), path: Some(cube.glb#Scene0), load_state: Loading, dep_load_state: Loading, rec_dep_load_state: Loading, loading_dependencies: {}, failed_dependencies: {}, loading_rec_dependencies: {}, failed_rec_dependencies: {}, dependants_waiting_on_load: {}, dependants_waiting_on_recursive_dep_load: {}, loader_dependencies: {}, handle_drops_to_skip: 0 }} } })
-[]
-
-Looks like I need to figure out the asset server but big progress!
-*/
-
-// pub fn fire_ray(
-//     camera_query: Query<(&Camera, &GlobalTransform)>,
-//     windows: Query<&Window>,
-// ) {
-//     let (camera, camera_transform) = camera_query.single();
-
-//     let Some(cursor_position) = windows.single().cursor_position() else {
-//         return;
-//     };
-    
-//     let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
-//         return;
-//     };
-// }
