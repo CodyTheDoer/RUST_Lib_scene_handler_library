@@ -5,6 +5,10 @@ use bevy::render::mesh::Mesh;
 
 use std::f32::consts::*;
 
+use wrti_library::watertight_ray_triangle_intersection;
+
+use glam::Vec3;
+
 #[derive(Debug, Component, Resource)]
 pub struct GlbComponent;
 
@@ -126,6 +130,26 @@ impl Triangles {
 #[derive(Debug, Component)]
 pub struct WorldModelCamera;
 
+pub fn wrti_test(
+    origin: Vec3,
+    direction: Vec3,
+    triangles: ResMut<Triangles>,
+    backface_culling: bool,
+) {
+    for triangle in triangles.get_triangles() {
+        if let Some(hit) = watertight_ray_triangle_intersection(origin, direction, triangle.as_tuple(), backface_culling) {
+            // call results for testing as needed
+            println!("Intersection found at t = {}", hit.t());
+            
+            // call all the results
+            let (t, u, v, w) = hit.as_tuple();
+            println!("Hit Breakdown: t: {}, u: {}, v: {}, w: {}", t, u, v, w)
+        } else {
+            println!("No intersection found");
+        }
+    }
+}
+
 pub fn setup_glb(
     mut commands: Commands, 
     mut data_state: ResMut<DataState>, 
@@ -150,9 +174,8 @@ pub fn setup_glb(
 pub fn unpack_glb_data(
     glb_components: Res<GlbComponents>, 
     mut data_state: ResMut<DataState>,
-    mut triangles: ResMut<Triangles>,
+    triangles: &mut ResMut<Triangles>,
     meshes: Res<Assets<Mesh>>,
-    // query: Query<(&Handle<Mesh>, Entity)>,
 ) {
     println!("GlbComponents: {:?}", glb_components.get_entities());
     println!("Triangles: {:?}", triangles.get_triangles());
@@ -172,11 +195,6 @@ pub fn unpack_glb_data(
                                 let v1 = Vec3::from(positions[triangle_indices[1] as usize]);
                                 let v2 = Vec3::from(positions[triangle_indices[2] as usize]);
                                 
-                                // println!("Triangle with vertices: 1");
-                                // println!("  v0: {:?}", v0);
-                                // println!("  v1: {:?}", v1);
-                                // println!("  v2: {:?}", v2);
-
                                 let triangle: Triangle = Triangle::new(v0, v1, v2);
                                 triangles.add_triangle(triangle)
                             }
@@ -190,11 +208,6 @@ pub fn unpack_glb_data(
                                 let v1 = Vec3::from(positions[triangle_indices[1] as usize]);
                                 let v2 = Vec3::from(positions[triangle_indices[2] as usize]);
     
-                                // println!("Triangle with vertices: 2");
-                                // println!("  v0: {:?}", v0);
-                                // println!("  v1: {:?}", v1);
-                                // println!("  v2: {:?}", v2);
-
                                 let triangle: Triangle = Triangle::new(v0, v1, v2);
                                 triangles.add_triangle(triangle)
                             }
@@ -203,36 +216,17 @@ pub fn unpack_glb_data(
                 }
             } else {
                 println!("Mesh {:?} has no indices, treating as a triangle list.", handle);
-                // If there are no indices, assume the vertices are arranged in triangle-list order
-                // for triangle_vertices in positions.chunks(3) {
-                //     if triangle_vertices.len() == 3 {
-                //         let v0 = Vec3::from(positions[triangle_indices[0]]);
-                //         let v1 = Vec3::from(positions[triangle_indices[1]]);
-                //         let v2 = Vec3::from(positions[triangle_indices[2]]);
-    
-                //         println!("Triangle with vertices:");
-                //         println!("  v0: {:?}", v0);
-                //         println!("  v1: {:?}", v1);
-                //         println!("  v2: {:?}", v2);
-                //     }
-                // }
             }
         } else {
             println!("Mesh {:?} has no vertex positions.", handle);
         }
     }
-    println!("");
-    println!("Triangles: {:?}", triangles.get_triangles());
+    // println!("");
 
-    // for &entity in glb_components.get_entities() {
-    //     if let Ok((mesh_handle, entity)) = query.get(entity) {
-    //         if let Some(mesh) = meshes.get(mesh_handle) {
-    //             println!("Mesh data for entity {:?}:", entity);
-    //         } else {
-    //             println!("Mesh asset not found for entity {:?}", entity);
-    //         }
-    //     }
+    // for triangle in triangles.get_triangles() {
+    //     println!("{:?}", triangle);
     // }
+
     data_state.set_parsed_true();
 }
 
@@ -245,7 +239,7 @@ pub fn fire_ray(
     windows: Query<&Window>,
 ) {
     if data_state.loaded() && !data_state.parsed() {
-        unpack_glb_data(glb_components, data_state, triangles, meshes);
+        unpack_glb_data(glb_components, data_state, &mut triangles, meshes);
     }
 
     let (camera, camera_transform) = camera_query.single();
@@ -258,7 +252,13 @@ pub fn fire_ray(
         return;
     };
 
-    println!("Ray data: {:?}:", ray); //Ray data: Ray3d { origin: Vec3(0.15266868, 6.976395, 4.955549), direction: Dir3(Vec3(0.9497226, -0.14684285, -0.27652156)) }:
+    println!("Ray: {:?}:", ray); //Ray data: Ray3d { origin: Vec3(0.15266868, 6.976395, 4.955549), direction: Dir3(Vec3(0.9497226, -0.14684285, -0.27652156)) }:
+    println!("Ray origin: {:?}:", ray.origin);
+    println!("Ray direction: {:?}:", ray.direction);
+
+    let backface_culling = true;
+    
+    wrti_test(glam::Vec3::from(ray.origin.to_array()), glam::Vec3::from((ray.direction).to_array()), triangles.into(), backface_culling);
 }
 
 pub fn spawn_view_model(
