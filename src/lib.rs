@@ -76,6 +76,14 @@ pub struct Triangle{
 }
 
 impl Triangle {
+    pub fn new(point_a: Vec3, point_b: Vec3, point_c: Vec3) -> Self {
+        Triangle {
+            point_a,
+            point_b,
+            point_c,
+        }
+    }
+
     pub fn as_tuple(&self) -> (Vec3, Vec3, Vec3) {
         (self.point_a, self.point_b, self.point_c)
     }
@@ -140,37 +148,104 @@ pub fn setup_glb(
 }
 
 pub fn unpack_glb_data(
-    mut data_state: ResMut<DataState>,
     glb_components: Res<GlbComponents>, 
-    triangles: Res<Triangles>,
+    mut data_state: ResMut<DataState>,
+    mut triangles: ResMut<Triangles>,
     meshes: Res<Assets<Mesh>>,
-    query: Query<(&Handle<Mesh>, Entity)>,
+    // query: Query<(&Handle<Mesh>, Entity)>,
 ) {
     println!("GlbComponents: {:?}", glb_components.get_entities());
     println!("Triangles: {:?}", triangles.get_triangles());
-    for &entity in glb_components.get_entities() {
-        if let Ok((mesh_handle, entity)) = query.get(entity) {
-            if let Some(mesh) = meshes.get(mesh_handle) {
-                println!("Mesh data for entity {:?}:", entity);
+    for (handle, mesh) in meshes.iter() {
+        // Get the vertex positions
+        if let Some(vertex_attribute) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+            let positions: &[[f32; 3]] = vertex_attribute.as_float3().unwrap();
+    
+            // Get the indices, if they exist
+            if let Some(indices) = mesh.indices() {
+                match indices {
+                    bevy::render::mesh::Indices::U16(indices) => {
+                        // Indices as u16
+                        for triangle_indices in indices.chunks(3) {
+                            if triangle_indices.len() == 3 {
+                                let v0 = Vec3::from(positions[triangle_indices[0] as usize]);
+                                let v1 = Vec3::from(positions[triangle_indices[1] as usize]);
+                                let v2 = Vec3::from(positions[triangle_indices[2] as usize]);
+                                
+                                // println!("Triangle with vertices: 1");
+                                // println!("  v0: {:?}", v0);
+                                // println!("  v1: {:?}", v1);
+                                // println!("  v2: {:?}", v2);
+
+                                let triangle: Triangle = Triangle::new(v0, v1, v2);
+                                triangles.add_triangle(triangle)
+                            }
+                        }
+                    }
+                    bevy::render::mesh::Indices::U32(indices) => {
+                        // Indices as u32
+                        for triangle_indices in indices.chunks(3) {
+                            if triangle_indices.len() == 3 {
+                                let v0 = Vec3::from(positions[triangle_indices[0] as usize]);
+                                let v1 = Vec3::from(positions[triangle_indices[1] as usize]);
+                                let v2 = Vec3::from(positions[triangle_indices[2] as usize]);
+    
+                                // println!("Triangle with vertices: 2");
+                                // println!("  v0: {:?}", v0);
+                                // println!("  v1: {:?}", v1);
+                                // println!("  v2: {:?}", v2);
+
+                                let triangle: Triangle = Triangle::new(v0, v1, v2);
+                                triangles.add_triangle(triangle)
+                            }
+                        }
+                    }
+                }
             } else {
-                println!("Mesh asset not found for entity {:?}", entity);
+                println!("Mesh {:?} has no indices, treating as a triangle list.", handle);
+                // If there are no indices, assume the vertices are arranged in triangle-list order
+                // for triangle_vertices in positions.chunks(3) {
+                //     if triangle_vertices.len() == 3 {
+                //         let v0 = Vec3::from(positions[triangle_indices[0]]);
+                //         let v1 = Vec3::from(positions[triangle_indices[1]]);
+                //         let v2 = Vec3::from(positions[triangle_indices[2]]);
+    
+                //         println!("Triangle with vertices:");
+                //         println!("  v0: {:?}", v0);
+                //         println!("  v1: {:?}", v1);
+                //         println!("  v2: {:?}", v2);
+                //     }
+                // }
             }
+        } else {
+            println!("Mesh {:?} has no vertex positions.", handle);
         }
     }
+    println!("");
+    println!("Triangles: {:?}", triangles.get_triangles());
+
+    // for &entity in glb_components.get_entities() {
+    //     if let Ok((mesh_handle, entity)) = query.get(entity) {
+    //         if let Some(mesh) = meshes.get(mesh_handle) {
+    //             println!("Mesh data for entity {:?}:", entity);
+    //         } else {
+    //             println!("Mesh asset not found for entity {:?}", entity);
+    //         }
+    //     }
+    // }
     data_state.set_parsed_true();
 }
 
 pub fn fire_ray(
+    triangles: ResMut<Triangles>,
     data_state: ResMut<DataState>,
     glb_components: Res<GlbComponents>,
-    triangles: Res<Triangles>,
     meshes: Res<Assets<Mesh>>,
-    query: Query<(&Handle<Mesh>, Entity)>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     windows: Query<&Window>,
 ) {
     if data_state.loaded() && !data_state.parsed() {
-        unpack_glb_data(data_state, glb_components, triangles, meshes, query);
+        unpack_glb_data(glb_components, data_state, triangles, meshes);
     }
 
     let (camera, camera_transform) = camera_query.single();
